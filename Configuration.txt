@@ -1,13 +1,13 @@
 Start Simulator Configuration File
 Version: 1.0
-Quantum (cycles): 10203049
-Processor Scheduling: FIFO
-File Path: ~/path
-Processor cycle time (msec): 10
-Monitor display time (msec): 25
-Hard drive cycle time (msec): 50
-Printer cycle time (msec): 500
-Keyboard cycle time (msec): 1000
-Memory type: Fixed
-Log: Log to Both
+Quantum (cycles): 15
+Processor Scheduling: RR
+File Path: ~/any/Path
+Processor cycle time (msec): 9
+Monitor display time (msec): 250
+Hard drive cycle time (msec): 23
+Printer cycle time (msec): 0
+Keyboard cycle time (msec): 0
+Memory type: D
+Log: T
 End Simulator Configuration File

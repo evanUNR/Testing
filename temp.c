@@ -11,7 +11,8 @@ Richard Lyday
 
 
 /* Global Constants */
-
+#define DEBUG__get_config 1
+#define DEBUG__get_and_convert 0
 
 
 ////////////////STRUCTS////////////////
@@ -96,30 +97,120 @@ struct INT
 
 
 /* Function Prototypes */
-void get_config(CONFIG config_data, char * config_file);
-
+void get_config(CONFIG * config_data, char * config_file);
+int get_and_convert(FILE * infile, int seek_count);
+void instruction(PROCESS * process, CONFIG config_data, INT * interrupt_head);
 
 int main()
 {
   CONFIG temp;
-  get_config(temp, "Configuration.txt");
+  get_config(&temp, "Configuration.txt");
 }
 
-void get_config(CONFIG config_data, char * config_file)
+
+/***********************************************
+Name: get_config
+Purpose: Get configuration information from a file and store it in config_data
+Parameters: 	config_data - holds configuration data
+		config_file - holds filename for configuration data
+Returns: Nothing
+***********************************************/
+void get_config(CONFIG * config_data, char * config_file)
 {
-  //Declare a 1-D array long enough hold the data from any 
-  //line of infile
-  char data[50];
-  char temp_data[10]; //can be siginifactly smaller than data because only holds numbers
   FILE * infile;
   infile=fopen(config_file, "r");
 
   //Get Quantum
-  fseek(infile, 66, SEEK_SET);
+  config_data->Quantum = get_and_convert(infile, 67);
+  #if DEBUG__get_config 
+    printf("Quantum: %i\n", config_data->Quantum);
+  #endif
   
-  config_data.Quantum = 0;
-  printf("Char Quantum ");
+  //Get proc_schedualing_type
+  fseek(infile, 22, SEEK_CUR);
+  fscanf(infile, "%[^\n]", config_data->proc_scheduling_type);
+  #if DEBUG__get_config 
+    printf("scheduling type: %s\n", config_data->proc_scheduling_type);
+  #endif
 
+  //Get output path
+  fseek(infile, 11, SEEK_CUR);
+  fscanf(infile, "%[^\n]", config_data->out_path);
+  #if DEBUG__get_config 
+    printf("out_path: %s\n", config_data->out_path);
+  #endif
+
+  //Get the processor cycle time 
+  config_data->proc_cycle_time = get_and_convert(infile, 30);
+  #if DEBUG__get_config 
+  printf("Proc cycle time: %i\n", config_data->proc_cycle_time);
+  #endif
+
+  //Get the monitor's display time
+  config_data->monitor_display_time = get_and_convert(infile,29);
+  #if DEBUG__get_config 
+    printf("Monitor display time: %i\n", config_data->monitor_display_time);
+  #endif
+
+  //Get the harddrive's cycle time
+  config_data->hardrive_cycle_time = get_and_convert(infile,30);
+  #if DEBUG__get_config 
+    printf("Hardrive cycle time: %i\n", config_data->hardrive_cycle_time);
+  #endif
+
+  //Get the printer's cycle time
+  config_data->printer_cycle_time = get_and_convert(infile, 27);
+  #if DEBUG__get_config 
+    printf("Printer cycle time: %i\n", config_data->printer_cycle_time);
+  #endif
+
+  //Get the Keyboard's cycle time
+  config_data->keyboard_cycle_time = get_and_convert(infile, 28);
+  #if DEBUG__get_config 
+  printf("Keyboard cycle time: %i\n", config_data->keyboard_cycle_time);
+  #endif
+
+  //Get the memory type: F for Fixed and D for Dynamic
+  fseek(infile, 13, SEEK_CUR);
+  config_data->memory_type = fgetc(infile);
+  #if DEBUG__get_config 
+  printf("Memory Type: %c\n", config_data->memory_type);
+  #endif
+
+  //Holds where to log data: F is to File, T is to Terminal, B is to Both
+  fseek(infile, 6, SEEK_CUR);
+  config_data->log = fgetc(infile);
+  #if DEBUG__get_config 
+    printf("Log: %c\n", config_data->log); 
+  #endif
+
+  fclose(infile);
+}
+
+
+/***********************************************
+Name: get_and_convert
+Purpose: Get information from file and convert it to an integer
+Parameters: 	infile - points to input file
+		seek_count - holds distance cursor is to move from current position to get 
+			     to next data
+Returns: 	return_val - holds data from file in integer form
+***********************************************/
+int get_and_convert(FILE * infile, int seek_count)
+{
+  //Declare a 1-D array long enough hold the data from any 
+  //line of infile
+  char data[50];
+
+  //Get Quantum
+  fseek(infile, seek_count, SEEK_CUR);
+  
+  int return_val = 0;
+
+  #if DEBUG__get_and_convert 
+    printf("Char Quantum ");
+  #endif
+  
   //counters
   int data_count_1, data_count_2, data_flip_1, data_flip_2, tens_place_count; 
 
@@ -129,7 +220,9 @@ void get_config(CONFIG config_data, char * config_file)
   //Quantum value may be multiple characters long, so get all of them
   for(data_count_1 = 0; (data[data_count_1] = fgetc(infile)) != '\n'; data_count_1++)
   {
-    printf("%c", data[data_count_1]);
+    #if DEBUG__get_and_convert
+      printf("%c", data[data_count_1]);
+    #endif
   }
 
   for(data_count_2 = 0; data_count_2 < data_count_1; data_count_2++)
@@ -147,19 +240,42 @@ void get_config(CONFIG config_data, char * config_file)
         place = place*10;
       }
     }
-    printf("\nDigit: %c", data[data_count_2]);
-    printf(" Place: %i", place);
-    printf("\n");
-
+  
+    #if DEBUG__get_and_convert 
+      printf("\nDigit: %c", data[data_count_2]);
+      printf(" Place: %i", place);
+      printf("\n");
+    #endif
+    
     //place character into Quantum;
-    config_data.Quantum += (data[data_count_2] - '0')*place;
-    printf("Quantum: %i\n", config_data.Quantum);
+    return_val += (data[data_count_2] - '0')*place;
+    
+    #if DEBUG__get_and_convert 
+      printf("Quantum: %i\n", return_val);
+    #endif
   }
  
-  printf(" Int Quantum: '%i' \n", config_data.Quantum);
+  #if DEBUG__get_and_convert 
+    printf(" Int Quantum: '%i' \n", return_val);
+  #endif
 
-  //Get proc_schedualing_type
-  fseek(infile, 22, SEEK_CUR);
- 
-  fclose(infile);
+  return return_val;
 }
+
+
+/***********************************************
+Name: instruction
+Purpose: Determine whether the instruction is an I/O instruction or a processing 
+         instruction and call the appropriate function
+Parameters: 	process - holds the process to execute
+		config_data - holds the configuration data
+		interrupt_head - holds the head to the interrupt queue
+Returns: 	Nothing
+***********************************************/
+void instruction(PROCESS * process, CONFIG config_data, INT * interrupt_head)
+{
+  //Stuff here!
+}
+
+
+
